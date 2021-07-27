@@ -1,0 +1,14 @@
+prefix=/home/dxw/space/ffmpeg_maker/build/ffmpeg/armeabi-v7a
+exec_prefix=${prefix}
+libdir=/home/dxw/space/ffmpeg_maker/build/ffmpeg/armeabi-v7a/lib
+includedir=/home/dxw/space/ffmpeg_maker/build/ffmpeg/armeabi-v7a/include
+
+Name: libavutil
+Description: FFmpeg utility library
+Version: 56.51.100
+Requires: 
+Requires.private: 
+Conflicts:
+Libs: -L${libdir}  -lavutil 
+Libs.private: -pthread -lm
+Cflags: -I${includedir}

@@ -1,0 +1,14 @@
+prefix=/home/dxw/space/ffmpeg_maker/build/ffmpeg/armeabi-v7a
+exec_prefix=${prefix}
+libdir=/home/dxw/space/ffmpeg_maker/build/ffmpeg/armeabi-v7a/lib
+includedir=/home/dxw/space/ffmpeg_maker/build/ffmpeg/armeabi-v7a/include
+
+Name: libavcodec
+Description: FFmpeg codec library
+Version: 58.91.100
+Requires: 
+Requires.private: libswresample >= 3.7.100, libavutil >= 56.51.100
+Conflicts:
+Libs: -L${libdir}  -lavcodec 
+Libs.private: -pthread -lm -lz
+Cflags: -I${includedir}
