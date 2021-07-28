@@ -45,6 +45,7 @@ struct SwrContextWrapper {
     uint8_t **dst_data;
     int dst_linesize;
     int max_dst_nb_samples;
+    bool first_process;
 };
 
 int ffmpeg_resampling_init(struct SwrContextWrapper *swr_ctx_wrapper);

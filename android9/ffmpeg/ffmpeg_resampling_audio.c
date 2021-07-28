@@ -123,6 +123,7 @@ int ffmpeg_resampling_init(struct SwrContextWrapper *swr_ctx_wrapper)
     swr_ctx_wrapper->dst_data = dst_data;
     swr_ctx_wrapper->dst_linesize = dst_linesize;
     swr_ctx_wrapper->max_dst_nb_samples = dst_nb_samples;
+    swr_ctx_wrapper->first_process = true;
 
     fprintf(stdout, "swr_ctx_wrapper swr_ctx=%p, src_rate=%d, dst_rate=%d, src_nb_channels=%d, \
 dst_nb_channels=%d, src_sample_fmt=%d, dst_sample_fmt=%d, src_bytes_per_samples=%d, \
@@ -147,6 +148,8 @@ int resampling_process(struct SwrContextWrapper *swr_ctx_wrapper, uint8_t *pInBu
     int src_nb_samples, dst_nb_samples;
     int dst_bufsize;
     int ret;
+    uint8_t *temp = NULL;
+    int dst_bytes_per_samples = 0;
 
     /* init data */
     if (!swr_ctx_wrapper || !swr_ctx_wrapper->swr_ctx) {
@@ -205,6 +208,20 @@ int resampling_process(struct SwrContextWrapper *swr_ctx_wrapper, uint8_t *pInBu
         goto end;
     }
     fprintf(stdout, "samples in:%d out:%d ex:%d, buffersize in:%d out:%d\n", src_nb_samples, ret, src_linesize, dst_bufsize);
+    if (swr_ctx_wrapper->first_process && ret < dst_nb_samples - 1) {
+        dst_bytes_per_samples = swr_ctx_wrapper->dst_nb_channels * av_get_bytes_per_sample(swr_ctx_wrapper->dst_sample_fmt);
+        temp = malloc(ret * dst_bytes_per_samples);
+        memcpy(temp, swr_ctx_wrapper->dst_data[0], ret * dst_bytes_per_samples);
+        memset(swr_ctx_wrapper->dst_data[0], 0, (dst_nb_samples - ret) * dst_bytes_per_samples);
+        memcpy(swr_ctx_wrapper->dst_data[0] + (dst_nb_samples - ret) * dst_bytes_per_samples, temp, ret * dst_bytes_per_samples);
+        *ppOutBuffer = swr_ctx_wrapper->dst_data[0];
+        *pOutBytes = dst_bytes_per_samples * dst_bytes_per_samples;
+        swr_ctx_wrapper->first_process = false;
+        return 0;
+    } else if (ret < dst_nb_samples - 1) {
+        fprintf(stderr, "ret is too small!\n");
+        //goto end;
+    }
     *ppOutBuffer = swr_ctx_wrapper->dst_data[0];
     *pOutBytes = dst_bufsize;
     return 0;
