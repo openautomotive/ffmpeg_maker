@@ -68,7 +68,8 @@ int ffmpeg_resampling_init(struct SwrContextWrapper *swr_ctx_wrapper)
     src_bytes_per_samples = src_nb_channels * av_get_bytes_per_sample(src_sample_fmt);
     src_linesize = swr_ctx_wrapper->pre_defined_input_size;
     if (0 >= src_linesize || src_linesize % src_bytes_per_samples) {
-        fprintf(stderr, "pre_defined_input_size not align with src format\n");
+        fprintf(stderr, "pre_defined_input_size not align with src format src_linesize=%d, src_bytes_per_samples=%d\n",
+            src_linesize, src_bytes_per_samples);
         ret = AVERROR(EINVAL);
         goto end;
     }
@@ -121,9 +122,12 @@ int ffmpeg_resampling_init(struct SwrContextWrapper *swr_ctx_wrapper)
     swr_ctx_wrapper->src_bytes_per_samples = src_bytes_per_samples;
     swr_ctx_wrapper->dst_data = dst_data;
     swr_ctx_wrapper->dst_linesize = dst_linesize;
-    swr_ctx_wrapper->dst_nb_samples = dst_nb_samples;
+    swr_ctx_wrapper->max_dst_nb_samples = dst_nb_samples;
 
-    fprintf(stdout, "swr_ctx_wrapper swr_ctx=%p\n", swr_ctx_wrapper->swr_ctx);
+    fprintf(stdout, "swr_ctx_wrapper swr_ctx=%p, src_rate=%d, dst_rate=%d, src_nb_channels=%d, \
+dst_nb_channels=%d, src_sample_fmt=%d, dst_sample_fmt=%d, src_bytes_per_samples=%d, \
+src_linesize=%d, dst_linesize=%d\n", swr_ctx_wrapper->swr_ctx, src_rate, dst_rate, src_nb_channels,
+        dst_nb_channels, src_sample_fmt, dst_sample_fmt, src_bytes_per_samples, src_linesize, dst_linesize);
     return 0;
 
 end:
@@ -136,7 +140,7 @@ end:
 
 }
 
-int resampling_process(struct SwrContextWrapper *swr_ctx_wrapper, uint8_t *pInBuffer, uint32_t inBytes, uint8_t **ppOutBuffer, uint32_t *pOutBytes)
+int resampling_process(struct SwrContextWrapper *swr_ctx_wrapper, uint8_t *pInBuffer, int inBytes, uint8_t **ppOutBuffer, int *pOutBytes)
 {
     uint8_t **src_data = NULL, **dst_data = NULL;;
     int src_linesize, dst_linesize;
@@ -166,7 +170,7 @@ int resampling_process(struct SwrContextWrapper *swr_ctx_wrapper, uint8_t *pInBu
     /* compute destination number of samples */
     dst_nb_samples = av_rescale_rnd(swr_get_delay(swr_ctx_wrapper->swr_ctx, swr_ctx_wrapper->src_rate) +
             src_nb_samples, swr_ctx_wrapper->dst_rate, swr_ctx_wrapper->src_rate, AV_ROUND_UP);
-    if (dst_nb_samples > swr_ctx_wrapper->dst_nb_samples) {
+    if (dst_nb_samples > swr_ctx_wrapper->max_dst_nb_samples) {
         av_freep(&swr_ctx_wrapper->dst_data[0]);
         ret = av_samples_alloc(dst_data, &dst_linesize, swr_ctx_wrapper->dst_nb_channels,
                                         dst_nb_samples, swr_ctx_wrapper->dst_sample_fmt, 1);
@@ -177,23 +181,30 @@ int resampling_process(struct SwrContextWrapper *swr_ctx_wrapper, uint8_t *pInBu
         }
         swr_ctx_wrapper->dst_data = dst_data;
         swr_ctx_wrapper->dst_linesize = dst_linesize;
-        swr_ctx_wrapper->dst_nb_samples = dst_nb_samples;
+        swr_ctx_wrapper->max_dst_nb_samples = dst_nb_samples;
     }
     
     /* convert to destination format */
-    ret = swr_convert(swr_ctx_wrapper->swr_ctx, swr_ctx_wrapper->dst_data, swr_ctx_wrapper->dst_nb_samples,
+    //fprintf(stdout, "in swr_ctx:%p, dst_data:%p, dst_nb_samples:%d, src_data:%p, src_nb_samples:%d, *dst:%p, *src:%p\n",
+    //            swr_ctx_wrapper->swr_ctx, swr_ctx_wrapper->dst_data, dst_nb_samples,
+    //            src_data, src_nb_samples, *swr_ctx_wrapper->dst_data, *src_data);
+    ret = swr_convert(swr_ctx_wrapper->swr_ctx, swr_ctx_wrapper->dst_data, dst_nb_samples,
             (const uint8_t **)src_data, src_nb_samples);
+    fprintf(stdout, "out swr_ctx:%p, dst_data:%p, dst_nb_samples:%d, src_data:%p, src_nb_samples:%d, *dst:%p, *src:%p, ret:%d\n",
+                swr_ctx_wrapper->swr_ctx, swr_ctx_wrapper->dst_data, dst_nb_samples,
+                src_data, src_nb_samples, *swr_ctx_wrapper->dst_data, *src_data, ret);
     if (ret < 0) {
         fprintf(stderr, "Error while converting\n");
         goto end;
     }
+
     dst_bufsize = av_samples_get_buffer_size(&swr_ctx_wrapper->dst_linesize, swr_ctx_wrapper->dst_nb_channels,
                                              ret, swr_ctx_wrapper->dst_sample_fmt, 1);
     if (dst_bufsize < 0) {
         fprintf(stderr, "Could not get sample buffer size\n");
         goto end;
     }
-    printf("in:%d out:%d\n", src_nb_samples, ret);
+    fprintf(stdout, "samples in:%d out:%d ex:%d, buffersize in:%d out:%d\n", src_nb_samples, ret, src_linesize, dst_bufsize);
     *ppOutBuffer = swr_ctx_wrapper->dst_data[0];
     *pOutBytes = dst_bufsize;
     return 0;

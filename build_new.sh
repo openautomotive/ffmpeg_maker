@@ -11,8 +11,8 @@ BUILD_DIR=${BASE_DIR}/build
 BUILD_DIR_FFMPEG=${BUILD_DIR}/ffmpeg
 BUILD_DIR_EXTERNAL=${BUILD_DIR}/external
 export PKG_CONFIG_EXECUTABLE=$(which pkg-config)
-ANDROID_ABI=arm64-v8a
-#ANDROID_ABI=armeabi-v7a
+#ANDROID_ABI=arm64-v8a
+ANDROID_ABI=armeabi-v7a
 DESIRED_ANDROID_API_LEVEL=21
 ANDROID_NDK_HOME=~/space/ffmpeg_maker/android-ndk-r21d
 HOST_TAG=linux-x86_64
@@ -223,4 +223,5 @@ echo "  $ADDITIONAL_COMPONENTS || exit 1 "
 
 ${MAKE_EXECUTABLE} clean
 ${MAKE_EXECUTABLE} -j${HOST_NPROC}
+${MAKE_EXECUTABLE} examples
 ${MAKE_EXECUTABLE} install

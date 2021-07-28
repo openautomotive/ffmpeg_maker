@@ -44,11 +44,11 @@ struct SwrContextWrapper {
     int src_bytes_per_samples;
     uint8_t **dst_data;
     int dst_linesize;
-    int dst_nb_samples;
+    int max_dst_nb_samples;
 };
 
 int ffmpeg_resampling_init(struct SwrContextWrapper *swr_ctx_wrapper);
-int resampling_process(struct SwrContextWrapper *swr_ctx_wrapper, uint8_t *pInBuffer, uint32_t inBytes, uint8_t **ppOutBuffer, uint32_t *pOutBytes);
+int resampling_process(struct SwrContextWrapper *swr_ctx_wrapper, uint8_t *pInBuffer, int inBytes, uint8_t **ppOutBuffer, int *pOutBytes);
 void ffmpeg_resampling_deinit(struct SwrContextWrapper *swr_ctx_wrapper);
 
 #endif /* FFMPEG_RESAMPLING_AUDIO_H */
